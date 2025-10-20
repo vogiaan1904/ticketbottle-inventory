@@ -2,15 +2,13 @@ package models
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // Reservation represents short-lived holds created by Order service
 type Reservation struct {
-	ID            uint              `gorm:"primarykey"`
-	OrderID       uuid.UUID         `gorm:"type:uuid;not null;uniqueIndex:idx_order_ticket"`
-	TicketClassID uint              `gorm:"not null;uniqueIndex:idx_order_ticket;index:idx_ticket_status_expires"`
+	ID            int64             `gorm:"primarykey;autoIncrement"`
+	OrderCode     string            `gorm:"not null;uniqueIndex:idx_order_ticket"`
+	TicketClassID int64             `gorm:"not null;uniqueIndex:idx_order_ticket;index:idx_ticket_status_expires"`
 	Qty           int               `gorm:"not null"`
 	ExpiresAt     time.Time         `gorm:"not null;index:idx_ticket_status_expires"`
 	Status        ReservationStatus `gorm:"not null;index:idx_ticket_status_expires"`

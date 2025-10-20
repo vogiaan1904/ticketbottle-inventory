@@ -2,12 +2,10 @@ package service
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type CreateTicketClassInput struct {
-	EventID     uuid.UUID
+	EventID     string
 	Name        string
 	PriceCents  int64
 	Currency    string
@@ -24,4 +22,9 @@ type UpdateTicketClassInput struct {
 	SaleStartAt *time.Time
 	SaleEndAt   *time.Time
 	Status      *string
+}
+
+type CheckAvailabilityInput struct {
+	TicketClassID int64
+	Qty           int
 }

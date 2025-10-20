@@ -19,7 +19,7 @@ type TicketClassService interface {
 	DecrementReserved(ctx context.Context, id uint, quantity int) error
 	IncrementSold(ctx context.Context, id uint, quantity int) error
 	GetAvailableCount(ctx context.Context, id uint) (int, error)
-	CheckAvailability(ctx context.Context, id uint, quantity int) (bool, error)
+	CheckAvailability(ctx context.Context, ins []CheckAvailabilityInput) (bool, error)
 }
 
 type implTicketClassService struct {
@@ -143,13 +143,47 @@ func (s *implTicketClassService) GetAvailableCount(ctx context.Context, id uint)
 	return tc.Total - tc.Reserved - tc.Sold, nil
 }
 
-func (s *implTicketClassService) CheckAvailability(ctx context.Context, id uint, quantity int) (bool, error) {
-	var count int64
-	err := s.repo.WithContext(ctx).
-		Model(&models.TicketClass{}).
-		Where("id = ?", id).
-		Where("total >= reserved + sold + ?", quantity).
-		Count(&count).Error
+func (s *implTicketClassService) CheckAvailability(ctx context.Context, ins []CheckAvailabilityInput) (bool, error) {
+	if len(ins) == 0 {
+		return true, nil
+	}
 
-	return count > 0, err
+	// Extract all ticket class IDs
+	ids := make([]int64, 0, len(ins))
+	qtyMap := make(map[int64]int)
+
+	for _, in := range ins {
+		ids = append(ids, in.TicketClassID)
+		qtyMap[in.TicketClassID] = in.Qty
+	}
+
+	// Fetch all ticket classes at once
+	var ticketClasses []models.TicketClass
+	if err := s.repo.WithContext(ctx).
+		Model(&models.TicketClass{}).
+		Where("id IN ?", ids).
+		Find(&ticketClasses).Error; err != nil {
+		s.l.Errorf(ctx, "service.ticketclass.CheckAvailability: %v", err)
+		return false, err
+	}
+
+	// Check if we found all requested ticket classes
+	if len(ticketClasses) != len(ins) {
+		s.l.Warnf(ctx, "service.ticketclass.CheckAvailability: requested %d ticket classes, found %d", len(ins), len(ticketClasses))
+		return false, nil
+	}
+
+	// Check availability for each ticket class
+	for _, tc := range ticketClasses {
+		requestedQty := qtyMap[tc.ID]
+		availableQty := tc.Total - tc.Reserved - tc.Sold
+
+		if availableQty < requestedQty {
+			s.l.Warnf(ctx, "service.ticketclass.CheckAvailability: insufficient stock for ticket_class_id=%d (available=%d, requested=%d)",
+				tc.ID, availableQty, requestedQty)
+			return false, nil
+		}
+	}
+
+	return true, nil
 }

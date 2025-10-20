@@ -2,13 +2,15 @@ package service
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
-type CreateReservationInput struct {
-	OrderID       uuid.UUID
-	TicketClassID uint
+type ReserveInput struct {
+	OrderID   string
+	Items     []ReserveItem
+	ExpiresAt time.Time
+}
+
+type ReserveItem struct {
+	TicketClassID int64
 	Qty           int
-	ExpiresAt     time.Time
 }

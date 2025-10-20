@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	cfg "github.com/vogiaan/ticketbottle-inventory/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -14,16 +15,11 @@ import (
 // DB wraps the GORM database connection
 type DB struct {
 	*gorm.DB
-	config *Config
+	config *cfg.PostgresConfig
 }
 
 // New creates a new database connection
-func New(config *Config) (*DB, error) {
-	if config == nil {
-		config = DefaultConfig()
-	}
-
-	// Configure GORM logger
+func New(config *cfg.PostgresConfig) (*DB, error) {
 	gormLogger := logger.New(
 		log.New(log.Writer(), "\r\n", log.LstdFlags),
 		logger.Config{
@@ -34,7 +30,7 @@ func New(config *Config) (*DB, error) {
 		},
 	)
 
-	db, err := gorm.Open(postgres.Open(config.DSN()), &gorm.Config{
+	db, err := gorm.Open(postgres.Open(config.URL), &gorm.Config{
 		Logger:                 gormLogger,
 		SkipDefaultTransaction: true,
 		PrepareStmt:            true,
@@ -61,7 +57,7 @@ func New(config *Config) (*DB, error) {
 	}, nil
 }
 
-func Connect(config *Config, maxRetries int, retryInterval time.Duration) (*DB, error) {
+func Connect(config *cfg.PostgresConfig, maxRetries int, retryInterval time.Duration) (*DB, error) {
 	var db *DB
 	var err error
 

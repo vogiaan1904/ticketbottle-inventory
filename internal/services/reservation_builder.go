@@ -1,15 +1,17 @@
 package service
 
 import (
+	"time"
+
 	"github.com/vogiaan/ticketbottle-inventory/internal/models"
 )
 
-func (s implReservationService) buildModel(in CreateReservationInput) models.Reservation {
+func (s implReservationService) buildModel(oCode string, expAt time.Time, in ReserveItem) models.Reservation {
 	return models.Reservation{
-		OrderID:       in.OrderID,
+		OrderCode:     oCode,
 		TicketClassID: in.TicketClassID,
 		Qty:           in.Qty,
 		Status:        models.ReservationStatusActive,
-		ExpiresAt:     in.ExpiresAt,
+		ExpiresAt:     expAt,
 	}
 }
