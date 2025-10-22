@@ -15,8 +15,8 @@ import (
 	svc "github.com/vogiaan/ticketbottle-inventory/internal/services"
 	"github.com/vogiaan/ticketbottle-inventory/internal/workers"
 	pkgGorm "github.com/vogiaan/ticketbottle-inventory/pkg/gorm"
+	invpb "github.com/vogiaan/ticketbottle-inventory/pkg/grpc/inventory"
 	pkgLog "github.com/vogiaan/ticketbottle-inventory/pkg/logger"
-	inventorypb "github.com/vogiaan/ticketbottle-inventory/protogen/inventory"
 	"google.golang.org/grpc"
 )
 
@@ -61,18 +61,18 @@ func main() {
 	wkrMng.StartAll(ctx)
 
 	// gRPC server
-	invGrpcSvc := grpcSvc.NewInventoryGrpcService(rsvSvc, tcSvc, l)
+	grpcSvc := grpcSvc.NewGrpcService(rsvSvc, tcSvc, l)
 	lnr, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.GRpcPort))
 	if err != nil {
 		l.Fatalf(ctx, "gRPC server failed to listen: %v", err)
 	}
 
-	gRpcSrv := grpc.NewServer()
-	inventorypb.RegisterInventoryServiceServer(gRpcSrv, invGrpcSvc)
+	grpcSvr := grpc.NewServer()
+	invpb.RegisterInventoryServiceServer(grpcSvr, grpcSvc)
 
 	go func() {
 		l.Infof(ctx, "gRPC server is listening on port: %d", cfg.Server.GRpcPort)
-		if err := gRpcSrv.Serve(lnr); err != nil {
+		if err := grpcSvr.Serve(lnr); err != nil {
 			l.Fatalf(ctx, "Failed to serve gRPC: %v", err)
 		}
 	}()
@@ -85,7 +85,7 @@ func main() {
 
 	cancel()
 	time.Sleep(1 * time.Second)
-	gRpcSrv.GracefulStop()
+	grpcSvr.GracefulStop()
 	wkrMng.StopAll(ctx)
 
 	l.Info(ctx, "Server exited")
