@@ -7,7 +7,7 @@ import (
 // TicketClass represents ticket types for an event (GA, VIP, Seat Zone A, etc.)
 type TicketClass struct {
 	ID          int64  `gorm:"primarykey;autoIncrement"`
-	EventID     string `gorm:"not null;uniqueIndex:idx_event_name"`
+	EventID     string `gorm:"not null;uniqueIndex:idx_event_name;index:idx_event_id"`
 	Name        string `gorm:"not null;uniqueIndex:idx_event_name"`
 	PriceCents  int64  `gorm:"not null"`
 	Currency    string `gorm:"not null"`

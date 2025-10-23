@@ -124,6 +124,26 @@ func (s *grpcService) newUpdateTicketClassInput(req *invpb.UpdateTicketClassRequ
 	}, nil
 }
 
+func (s *grpcService) newGetManyTicketClassInput(req *invpb.FindManyTicketClassRequest) (svc.GetManyTicketClassInput, error) {
+	in := svc.GetManyTicketClassInput{
+		EventID: req.GetEventId(),
+	}
+
+	if len(req.GetIds()) > 0 {
+		ids := make([]int64, len(req.GetIds()))
+		for i, idStr := range req.GetIds() {
+			id, err := strconv.ParseInt(idStr, 10, 64)
+			if err != nil {
+				return svc.GetManyTicketClassInput{}, err
+			}
+			ids[i] = id
+		}
+		in.IDs = ids
+	}
+
+	return in, nil
+}
+
 // newReserveInput converts protobuf Reserve request to service input
 func (s *grpcService) newReserveInput(req *invpb.ReserveRequest) (svc.ReserveInput, error) {
 	expiresAt, err := util.ParseISO8601(req.GetExpiresAt())

@@ -11,14 +11,15 @@ import (
 
 type TicketClassService interface {
 	Create(ctx context.Context, in CreateTicketClassInput) (models.TicketClass, error)
-	Update(ctx context.Context, id uint, in UpdateTicketClassInput) (models.TicketClass, error)
-	GetByID(ctx context.Context, id uint) (models.TicketClass, error)
-	GetByEventID(ctx context.Context, eventID uint) ([]models.TicketClass, error)
-	Delete(ctx context.Context, id uint) error
-	IncrementReserved(ctx context.Context, id uint, quantity int) error
-	DecrementReserved(ctx context.Context, id uint, quantity int) error
-	IncrementSold(ctx context.Context, id uint, quantity int) error
-	GetAvailableCount(ctx context.Context, id uint) (int, error)
+	Update(ctx context.Context, id int64, in UpdateTicketClassInput) (models.TicketClass, error)
+	GetByID(ctx context.Context, id int64) (models.TicketClass, error)
+	GetByEventID(ctx context.Context, eventID string) ([]models.TicketClass, error)
+	GetMany(ctx context.Context, in GetManyTicketClassInput) ([]models.TicketClass, error)
+	Delete(ctx context.Context, id int64) error
+	IncrementReserved(ctx context.Context, id int64, quantity int) error
+	DecrementReserved(ctx context.Context, id int64, quantity int) error
+	IncrementSold(ctx context.Context, id int64, quantity int) error
+	GetAvailableCount(ctx context.Context, id int64) (int, error)
 	CheckAvailability(ctx context.Context, ins []CheckAvailabilityInput) (bool, error)
 }
 
@@ -44,7 +45,7 @@ func (s implTicketClassService) Create(ctx context.Context, in CreateTicketClass
 	return tc, nil
 }
 
-func (s implTicketClassService) Update(ctx context.Context, id uint, in UpdateTicketClassInput) (models.TicketClass, error) {
+func (s implTicketClassService) Update(ctx context.Context, id int64, in UpdateTicketClassInput) (models.TicketClass, error) {
 	var tc models.TicketClass
 	if err := s.repo.FindByID(ctx, &tc, id); err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -63,7 +64,7 @@ func (s implTicketClassService) Update(ctx context.Context, id uint, in UpdateTi
 	return tc, nil
 }
 
-func (s implTicketClassService) GetByID(ctx context.Context, id uint) (models.TicketClass, error) {
+func (s implTicketClassService) GetByID(ctx context.Context, id int64) (models.TicketClass, error) {
 	var tc models.TicketClass
 	if err := s.repo.FindByID(ctx, &tc, id); err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -76,7 +77,7 @@ func (s implTicketClassService) GetByID(ctx context.Context, id uint) (models.Ti
 	return tc, nil
 }
 
-func (s implTicketClassService) GetByEventID(ctx context.Context, eventID uint) ([]models.TicketClass, error) {
+func (s implTicketClassService) GetByEventID(ctx context.Context, eventID string) ([]models.TicketClass, error) {
 	var tcs []models.TicketClass
 	if err := s.repo.FindWhere(ctx, &tcs, "event_id = ?", eventID); err != nil {
 		s.l.Errorf(ctx, "service.ticketclass.GetByEventID: %v", err)
@@ -86,7 +87,32 @@ func (s implTicketClassService) GetByEventID(ctx context.Context, eventID uint) 
 	return tcs, nil
 }
 
-func (s *implTicketClassService) Delete(ctx context.Context, id uint) error {
+func (s implTicketClassService) GetMany(ctx context.Context, in GetManyTicketClassInput) ([]models.TicketClass, error) {
+	var tcs []models.TicketClass
+
+	// Build dynamic query
+	query := s.repo.GetDB().WithContext(ctx).Model(&models.TicketClass{})
+
+	// Add event_id filter if provided
+	if in.EventID != "" {
+		query = query.Where("event_id = ?", in.EventID)
+	}
+
+	// Add ids filter if provided
+	if len(in.IDs) > 0 {
+		query = query.Where("id IN ?", in.IDs)
+	}
+
+	// Execute the query
+	if err := query.Find(&tcs).Error; err != nil {
+		s.l.Errorf(ctx, "service.ticketclass.GetMany: %v", err)
+		return nil, err
+	}
+
+	return tcs, nil
+}
+
+func (s *implTicketClassService) Delete(ctx context.Context, id int64) error {
 	var tc models.TicketClass
 	if err := s.repo.FindByID(ctx, &tc, id); err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -105,7 +131,7 @@ func (s *implTicketClassService) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-func (s *implTicketClassService) IncrementReserved(ctx context.Context, id uint, quantity int) error {
+func (s *implTicketClassService) IncrementReserved(ctx context.Context, id int64, quantity int) error {
 	return s.repo.WithContext(ctx).
 		Model(&models.TicketClass{}).
 		Where("id = ?", id).
@@ -113,14 +139,14 @@ func (s *implTicketClassService) IncrementReserved(ctx context.Context, id uint,
 		Update("reserved", gorm.Expr("reserved + ?", quantity)).Error
 }
 
-func (s *implTicketClassService) DecrementReserved(ctx context.Context, id uint, quantity int) error {
+func (s *implTicketClassService) DecrementReserved(ctx context.Context, id int64, quantity int) error {
 	return s.repo.WithContext(ctx).
 		Model(&models.TicketClass{}).
 		Where("id = ?", id).
 		Update("reserved", gorm.Expr("GREATEST(0, reserved - ?)", quantity)).Error
 }
 
-func (s *implTicketClassService) IncrementSold(ctx context.Context, id uint, quantity int) error {
+func (s *implTicketClassService) IncrementSold(ctx context.Context, id int64, quantity int) error {
 	return s.repo.WithContext(ctx).
 		Model(&models.TicketClass{}).
 		Where("id = ?", id).
@@ -130,7 +156,7 @@ func (s *implTicketClassService) IncrementSold(ctx context.Context, id uint, qua
 		}).Error
 }
 
-func (s *implTicketClassService) GetAvailableCount(ctx context.Context, id uint) (int, error) {
+func (s *implTicketClassService) GetAvailableCount(ctx context.Context, id int64) (int, error) {
 	var tc models.TicketClass
 	if err := s.repo.FindByID(ctx, &tc, id); err != nil {
 		if err == gorm.ErrRecordNotFound {

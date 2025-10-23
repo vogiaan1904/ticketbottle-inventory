@@ -2,6 +2,7 @@ package grpc
 
 import (
 	invpb "github.com/vogiaan/ticketbottle-inventory/pkg/grpc/inventory"
+	"github.com/vogiaan/ticketbottle-inventory/pkg/util"
 )
 
 func (s *grpcService) validateCreateTicketClassRequest(req *invpb.CreateTicketClassRequest) error {
@@ -19,6 +20,20 @@ func (s *grpcService) validateCreateTicketClassRequest(req *invpb.CreateTicketCl
 	}
 	if req.GetTotal() <= 0 {
 		return ErrValidationFailed
+	}
+
+	if req.GetStartSaleAt() != "" {
+		_, err := util.ParseISO8601(req.GetStartSaleAt())
+		if err != nil {
+			return ErrValidationFailed
+		}
+	}
+
+	if req.GetEndSaleAt() != "" {
+		_, err := util.ParseISO8601(req.GetEndSaleAt())
+		if err != nil {
+			return ErrValidationFailed
+		}
 	}
 
 	return nil

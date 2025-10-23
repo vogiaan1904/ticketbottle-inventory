@@ -28,3 +28,8 @@ type CheckAvailabilityInput struct {
 	TicketClassID int64
 	Qty           int
 }
+
+type GetManyTicketClassInput struct {
+	EventID string
+	IDs     []int64
+}

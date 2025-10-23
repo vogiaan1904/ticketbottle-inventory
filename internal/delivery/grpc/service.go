@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/vogiaan/ticketbottle-inventory/internal/models"
 	svc "github.com/vogiaan/ticketbottle-inventory/internal/services"
 	invpb "github.com/vogiaan/ticketbottle-inventory/pkg/grpc/inventory"
 	"github.com/vogiaan/ticketbottle-inventory/pkg/logger"
@@ -55,9 +54,9 @@ func (s *grpcService) UpdateTicketClass(ctx context.Context, req *invpb.UpdateTi
 		return nil, response.GrpcError(err)
 	}
 
-	id, err := strconv.ParseUint(req.GetId(), 10, 64)
+	id, err := strconv.ParseInt(req.GetId(), 10, 64)
 	if err != nil {
-		s.l.Errorf(ctx, "internal.delivery.grpc.UpdateTicketClass.ParseUint: %v", err)
+		s.l.Errorf(ctx, "internal.delivery.grpc.UpdateTicketClass.ParseInt: %v", err)
 		return nil, response.GrpcError(ErrValidationFailed)
 	}
 
@@ -67,7 +66,7 @@ func (s *grpcService) UpdateTicketClass(ctx context.Context, req *invpb.UpdateTi
 		return nil, response.GrpcError(err)
 	}
 
-	tc, err := s.tcSvc.Update(ctx, uint(id), in)
+	tc, err := s.tcSvc.Update(ctx, id, in)
 	if err != nil {
 		err = s.mapError(err)
 		s.l.Errorf(ctx, "internal.delivery.grpc.UpdateTicketClass.Update: %v", err)
@@ -83,13 +82,13 @@ func (s *grpcService) FindOneTicketClass(ctx context.Context, req *invpb.FindOne
 		return nil, response.GrpcError(err)
 	}
 
-	id, err := strconv.ParseUint(req.GetId(), 10, 64)
+	id, err := strconv.ParseInt(req.GetId(), 10, 64)
 	if err != nil {
-		s.l.Errorf(ctx, "internal.delivery.grpc.FindOneTicketClass.ParseUint: %v", err)
+		s.l.Errorf(ctx, "internal.delivery.grpc.FindOneTicketClass.ParseInt: %v", err)
 		return nil, response.GrpcError(ErrValidationFailed)
 	}
 
-	tc, err := s.tcSvc.GetByID(ctx, uint(id))
+	tc, err := s.tcSvc.GetByID(ctx, id)
 	if err != nil {
 		err = s.mapError(err)
 		s.l.Errorf(ctx, "internal.delivery.grpc.FindOneTicketClass.GetByID: %v", err)
@@ -105,46 +104,16 @@ func (s *grpcService) FindManyTicketClass(ctx context.Context, req *invpb.FindMa
 		return nil, response.GrpcError(err)
 	}
 
-	var tcs []models.TicketClass
-	var err error
-
-	// If event_id is provided, get by event_id
-	if req.GetEventId() != "" {
-		eventID, parseErr := strconv.ParseUint(req.GetEventId(), 10, 64)
-		if parseErr != nil {
-			s.l.Errorf(ctx, "internal.delivery.grpc.FindManyTicketClass.ParseUint: %v", parseErr)
-			return nil, response.GrpcError(ErrValidationFailed)
-		}
-		tcs, err = s.tcSvc.GetByEventID(ctx, uint(eventID))
-	} else if len(req.GetIds()) > 0 {
-		// If IDs are provided, get by IDs
-		// Note: This would require implementing GetByIDs in the service
-		// For now, we'll get them one by one
-		ids := make([]uint, len(req.GetIds()))
-		for i, idStr := range req.GetIds() {
-			id, parseErr := strconv.ParseUint(idStr, 10, 64)
-			if parseErr != nil {
-				s.l.Errorf(ctx, "internal.delivery.grpc.FindManyTicketClass.ParseUint: %v", parseErr)
-				return nil, response.GrpcError(ErrValidationFailed)
-			}
-			ids[i] = uint(id)
-		}
-
-		// Get each ticket class by ID
-		tcs = make([]models.TicketClass, 0, len(ids))
-		for _, id := range ids {
-			tc, getErr := s.tcSvc.GetByID(ctx, id)
-			if getErr != nil {
-				// Skip not found errors, continue getting other ticket classes
-				continue
-			}
-			tcs = append(tcs, tc)
-		}
+	in, err := s.newGetManyTicketClassInput(req)
+	if err != nil {
+		s.l.Errorf(ctx, "internal.delivery.grpc.FindManyTicketClass.newGetManyTicketClassInput: %v", err)
+		return nil, response.GrpcError(err)
 	}
 
+	tcs, err := s.tcSvc.GetMany(ctx, in)
 	if err != nil {
 		err = s.mapError(err)
-		s.l.Errorf(ctx, "internal.delivery.grpc.FindManyTicketClass: %v", err)
+		s.l.Errorf(ctx, "internal.delivery.grpc.FindManyTicketClass.GetMany: %v", err)
 		return nil, response.GrpcError(err)
 	}
 
@@ -157,13 +126,13 @@ func (s *grpcService) DeleteTicketClass(ctx context.Context, req *invpb.DeleteTi
 		return nil, response.GrpcError(err)
 	}
 
-	id, err := strconv.ParseUint(req.GetId(), 10, 64)
+	id, err := strconv.ParseInt(req.GetId(), 10, 64)
 	if err != nil {
-		s.l.Errorf(ctx, "internal.delivery.grpc.DeleteTicketClass.ParseUint: %v", err)
+		s.l.Errorf(ctx, "internal.delivery.grpc.DeleteTicketClass.ParseInt: %v", err)
 		return nil, response.GrpcError(ErrValidationFailed)
 	}
 
-	err = s.tcSvc.Delete(ctx, uint(id))
+	err = s.tcSvc.Delete(ctx, id)
 	if err != nil {
 		err = s.mapError(err)
 		s.l.Errorf(ctx, "internal.delivery.grpc.DeleteTicketClass.Delete: %v", err)
@@ -203,13 +172,13 @@ func (s *grpcService) GetAvailability(ctx context.Context, req *invpb.GetAvailab
 		return nil, response.GrpcError(err)
 	}
 
-	id, err := strconv.ParseUint(req.GetTicketClassId(), 10, 64)
+	id, err := strconv.ParseInt(req.GetTicketClassId(), 10, 64)
 	if err != nil {
-		s.l.Errorf(ctx, "internal.delivery.grpc.GetAvailability.ParseUint: %v", err)
+		s.l.Errorf(ctx, "internal.delivery.grpc.GetAvailability.ParseInt: %v", err)
 		return nil, response.GrpcError(ErrValidationFailed)
 	}
 
-	count, err := s.tcSvc.GetAvailableCount(ctx, uint(id))
+	count, err := s.tcSvc.GetAvailableCount(ctx, id)
 	if err != nil {
 		err = s.mapError(err)
 		s.l.Errorf(ctx, "internal.delivery.grpc.GetAvailability.GetAvailableCount: %v", err)

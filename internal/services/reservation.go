@@ -284,7 +284,7 @@ func (s implReservationService) cancelReservationTx(ctx context.Context, tx *gor
 	// Step 1: Lock and fetch all reservations for this order
 	var rs []models.Reservation
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("order_id = ?", oCode).
+		Where("order_code = ?", oCode).
 		Find(&rs).Error; err != nil {
 		s.l.Errorf(ctx, "service.reservation.CancelReservation.LockReservations: %v", err)
 		return err
