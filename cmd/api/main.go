@@ -11,6 +11,7 @@ import (
 
 	"github.com/vogiaan/ticketbottle-inventory/config"
 	grpcSvc "github.com/vogiaan/ticketbottle-inventory/internal/delivery/grpc"
+	"github.com/vogiaan/ticketbottle-inventory/internal/interceptors"
 	"github.com/vogiaan/ticketbottle-inventory/internal/models"
 	svc "github.com/vogiaan/ticketbottle-inventory/internal/services"
 	"github.com/vogiaan/ticketbottle-inventory/internal/workers"
@@ -67,7 +68,9 @@ func main() {
 		l.Fatalf(ctx, "gRPC server failed to listen: %v", err)
 	}
 
-	grpcSvr := grpc.NewServer()
+	grpcSvr := grpc.NewServer(
+		grpc.UnaryInterceptor(interceptors.GrpcLoggingInterceptor(l)),
+	)
 	invpb.RegisterInventoryServiceServer(grpcSvr, grpcSvc)
 
 	go func() {

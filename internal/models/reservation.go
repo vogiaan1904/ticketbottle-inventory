@@ -24,11 +24,11 @@ func (Reservation) TableName() string {
 }
 
 func (r *Reservation) IsActive() bool {
-	return r.Status == ReservationStatusActive && time.Now().Before(r.ExpiresAt)
+	return r.Status == ReservationStatusActive && time.Now().UTC().Before(r.ExpiresAt)
 }
 
 func (r *Reservation) IsExpired() bool {
-	return time.Now().After(r.ExpiresAt) && r.Status == ReservationStatusActive
+	return time.Now().UTC().After(r.ExpiresAt) && r.Status == ReservationStatusActive
 }
 
 type ReservationStatus string

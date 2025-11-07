@@ -164,7 +164,7 @@ func (s *grpcService) newReserveInput(req *invpb.ReserveRequest) (svc.ReserveInp
 	}
 
 	return svc.ReserveInput{
-		OrderID:   req.GetOrderCode(),
+		OrderCode: req.GetOrderCode(),
 		Items:     items,
 		ExpiresAt: expiresAt,
 	}, nil

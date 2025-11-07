@@ -5,7 +5,7 @@ import (
 )
 
 type ReserveInput struct {
-	OrderID   string
+	OrderCode string
 	Items     []ReserveItem
 	ExpiresAt time.Time
 }

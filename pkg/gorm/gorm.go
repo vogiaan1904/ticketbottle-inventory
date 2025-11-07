@@ -34,6 +34,9 @@ func New(config *cfg.PostgresConfig) (*DB, error) {
 		Logger:                 gormLogger,
 		SkipDefaultTransaction: true,
 		PrepareStmt:            true,
+		NowFunc: func() time.Time {
+			return time.Now().UTC()
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
@@ -50,6 +53,12 @@ func New(config *cfg.PostgresConfig) (*DB, error) {
 	sqlDB.SetMaxIdleConns(config.MaxIdleConns)
 	sqlDB.SetConnMaxLifetime(config.ConnMaxLifetime)
 	sqlDB.SetConnMaxIdleTime(config.ConnMaxIdleTime)
+
+	if err := db.Exec("SET TIME ZONE 'UTC'").Error; err != nil {
+		return nil, fmt.Errorf("failed to set timezone to UTC: %w", err)
+	}
+
+	time.Local = time.UTC
 
 	return &DB{
 		DB:     db,
