@@ -2,6 +2,7 @@
 
 protoc-all:
 	$(MAKE) protoc PROTO=protos-submodule/inventory.proto OUT_DIR=pkg/grpc/inventory
+	$(MAKE) protoc-event
 
 protoc:
 	protoc --go_out=$(OUT_DIR) --go_opt=paths=source_relative \
